@@ -70,6 +70,15 @@ boundedFIFO n = foldC' step empty
     step Nothing  as = as
     step (Just a) as = Sequence.take n $ a <| as
 
+-- | Buffers and returns the elements in First-In-First-Out order,
+--   returning 'Nothing' whenever the buffer is empty.
+fifo :: (Monad m, Data a) => Cell m (Seq a) (Maybe a)
+fifo = feedback empty $ proc (as, accum) -> do
+  let accum' = accum >< as
+  returnA -< case accum' of
+    Empty    -> (Nothing, empty)
+    a :<| as -> (Just a , as)
+
 -- | Returns 'True' iff the current input value is 'True' and the last input value was 'False'.
 edge :: Monad m => Cell m Bool Bool
 edge = proc b -> do
