@@ -22,7 +22,6 @@ import Test.Framework.Providers.QuickCheck2
 -- essence-of-live-coding
 import LiveCoding
 import LiveCoding.Handle
-import LiveCoding.HandlingState (interpretHandlingState, runHandlingStateCarrierT, garbageCollected, initHandlingState)
 import Util.LiveProgramMigration
 
 testHandle :: Handle (RWS () [String] Int) String
@@ -37,8 +36,8 @@ testHandle = Handle
 
 test = testGroup "Handle.LiveProgram"
   [ testProperty "Trigger destructors in live program" LiveProgramMigration
-    { liveProgram1 = flip runStateL initHandlingState $ liveCell
-        $ hoistCell (interpretHandlingState . garbageCollected) (handling testHandle >>> arrM (lift . tell . return)) >>> constM inspectHandlingState
+    { liveProgram1 = runHandlingState $ liveCell
+        $ handling testHandle >>> arrM (lift . tell . return) >>> constM inspectHandlingState
     , liveProgram2 = runHandlingState mempty
     , input1 = replicate 3 ()
     , input2 = replicate 3 ()
