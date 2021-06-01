@@ -14,12 +14,17 @@ module LiveCoding.HandlingState where
 -- base
 import Control.Arrow (returnA, arr, (>>>))
 import Data.Data
+import Data.Foldable (traverse_)
+import Data.Functor (($>))
 
 -- transformers
 import Control.Monad.Trans.Class (MonadTrans(lift))
-import Control.Monad.Trans.State.Strict
-import Data.Foldable (traverse_)
-import Data.Functor (($>))
+import Control.Monad.Trans.Writer.Strict ( WriterT(runWriterT) )
+import Control.Monad.Trans.Accum
+    ( add, look, runAccumT, AccumT(..) )
+
+-- mtl
+import Control.Monad.Writer.Class
 
 -- containers
 import Data.IntMap
@@ -39,8 +44,8 @@ import LiveCoding.Cell.Monad
 import LiveCoding.Cell.Monad.Trans
 import LiveCoding.LiveProgram
 import LiveCoding.LiveProgram.Monad.Trans
-import Control.Monad.Trans.Writer.Strict
-import Control.Monad.Trans.Accum
+import LiveCoding.HandlingState.AccumTOrphan
+import Control.Monad.IO.Class
 
 data Handling h where
   Handling
@@ -128,9 +133,16 @@ instance Monad m => Monad (MyHandlingStateT m) where
 --   It is basically a monad in which handles are automatically garbage collected.
 newtype HandlingStateT m a = HandlingStateT
   { unHandlingStateT :: AccumT Registry (WriterT (HandlingState m) m) a }
-  deriving (Functor, Applicative, Monad)
+  deriving (Functor, Applicative, Monad, MonadIO)
+
 instance MonadTrans HandlingStateT where
   lift = HandlingStateT . lift . lift
+
+
+instance Monad m => MonadWriter (HandlingState m) (HandlingStateT m) where
+  writer = HandlingStateT . writer
+  listen = HandlingStateT . listen . unHandlingStateT
+  pass = HandlingStateT . pass . unHandlingStateT
 
 -- | Handle the 'HandlingStateT' effect _without_ garbage collection.
 --   Apply this to your main loop after calling 'foreground'.
@@ -157,32 +169,39 @@ runHandlingStateC
      (Monad m, Typeable m)
   => Cell (HandlingStateT m) a b
   -> Cell                 m  a b
-runHandlingStateC cell = flip runStateC_ mempty
-  $ hoistCellOutput garbageCollected cell
+runHandlingStateC = hoistCell $ runHandlingStateT . garbageCollected
+-- runHandlingStateC cell = flip runStateC_ mempty
+--   $ hoistCellOutput garbageCollected cell
 
 -- | Like 'runHandlingStateC', but for whole live programs.
 runHandlingState
   :: (Monad m, Typeable m)
   => LiveProgram (HandlingStateT m)
   -> LiveProgram                 m
-runHandlingState LiveProgram { .. } = flip runStateL mempty LiveProgram
-  { liveStep = garbageCollected . liveStep
-  , ..
-  }
+runHandlingState = hoistLiveProgram $ runHandlingStateT . garbageCollected
+-- runHandlingState LiveProgram { .. } = flip runStateL mempty LiveProgram
+--   { liveStep = garbageCollected . liveStep
+--   , ..
+--   }
 
 -- Now I need mtl
 garbageCollected
   :: Monad m
   => HandlingStateT m a
   -> HandlingStateT m a
-garbageCollected action = _ $ listen action
+garbageCollected actionHS = pass $ do
+  (a, HandlingState { .. }) <- listen actionHS
+  let registeredKeys = IntSet.fromList registered
+      registeredConstructors = restrictKeys destructors registeredKeys
+      unregisteredConstructors = withoutKeys destructors registeredKeys
+  lift $ traverse_ action unregisteredConstructors
+  return (a, const HandlingState { destructors = registeredConstructors, registered = [] })
 -- garbageCollected action = unregisterAll >> action <* destroyUnregistered
 
 data Destructor m = Destructor
   { isRegistered :: Bool -- TODO we don't need this anymore
   , action       :: m ()
   }
-
 
 register
   :: Monad m
@@ -191,7 +210,7 @@ register
 register action = HandlingStateT $ do
   Registry { nHandles = key } <- look
   add $ Registry 1
-  lift $ tell HandlingState
+  tell HandlingState
     { destructors = singleton key Destructor { isRegistered = True, action }
     , registered = [key]
     }
@@ -202,7 +221,7 @@ reregister
   => m ()
   -> Key
   -> HandlingStateT m ()
-reregister action key = HandlingStateT $ lift $ tell HandlingState
+reregister action key = HandlingStateT $ tell HandlingState
   { destructors = singleton key Destructor { isRegistered = True, action }
   , registered = [key]
   }
