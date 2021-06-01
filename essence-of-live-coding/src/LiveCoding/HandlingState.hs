@@ -3,6 +3,10 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFunctor #-}
 module LiveCoding.HandlingState where
 
 -- base
@@ -13,10 +17,16 @@ import Data.Data
 import Control.Monad.Trans.Class (MonadTrans(lift))
 import Control.Monad.Trans.State.Strict
 import Data.Foldable (traverse_)
+import Data.Functor (($>))
 
 -- containers
 import Data.IntMap
 import qualified Data.IntMap as IntMap
+import qualified Data.IntSet as IntSet
+import qualified Data.List as List
+
+-- mmorph
+import Control.Monad.Morph
 
 -- fused-effects
 import Control.Algebra
@@ -49,15 +59,13 @@ instance MFunctor HandlingStateE where
   hoist morphism DestroyUnregistered = DestroyUnregistered
 
 instance Algebra HandlingStateE (HandlingStateT m) where
-  alg = _
-
--- | In this monad, handles can be registered,
---   and their destructors automatically executed.
---   It is basically a monad in which handles are automatically garbage collected.
-type HandlingStateT m = StateT (HandlingState m) m
-
-hoistHandlingStateT :: (Monad m, Monad n) => (forall x . m x -> n x) -> HandlingStateT m a -> HandlingStateT n a
-hoistHandlingStateT morphism = mapInstr (hoist morphism) . hoistProgramT morphism
+  -- handler :: Handler ctx n (HandlingStateT m)
+  --         =  ctx (n x) -> HandlingStateT m (ctx x)
+  -- alg handler (Register action) ctx = _ $ handler $ ctx $> action
+  alg handler (Register action) ctx = _ $ runStateT $ unHandlingStateT $ register action
+  alg handler (Reregister nunit i) ctx = _
+  alg handler UnregisterAll ctx = ctx <$ unregisterAll
+  alg handler DestroyUnregistered ctx = ctx <$ destroyUnregistered
 
 type Destructors m = IntMap (Destructor m)
 
@@ -71,7 +79,8 @@ data HandlingState m = HandlingState
 -- | In this monad, handles can be registered,
 --   and their destructors automatically executed.
 --   It is basically a monad in which handles are automatically garbage collected.
-type HandlingStateT m = StateT (HandlingState m) m
+newtype HandlingStateT m a = HandlingStateT
+  { unHandlingStateT :: StateT (HandlingState m) m a }
 
 initHandlingState :: HandlingState m
 initHandlingState = HandlingState
@@ -86,7 +95,7 @@ runHandlingStateT
   :: Monad m
   => HandlingStateT m a
   -> m a
-runHandlingStateT = flip evalStateT initHandlingState
+runHandlingStateT = flip evalStateT initHandlingState . unHandlingStateT
 
 {- | Apply this to your main live cell before passing it to the runtime.
 
