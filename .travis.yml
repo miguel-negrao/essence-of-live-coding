@@ -28,26 +28,13 @@ matrix:
 
   # Stack
   - ghc: '8.10.4'
-    env: STACK_YAML="$TRAVIS_BUILD_DIR/stack.yaml"
+    env: STACK_YAML="stack.yaml"
   - ghc: '8.8.4'
-    env: STACK_YAML="$TRAVIS_BUILD_DIR/stack-lts-16.31.yaml"
+    env: STACK_YAML="stack-lts-16.31.yaml"
   - ghc: '8.6.5'
-    env: STACK_YAML="$TRAVIS_BUILD_DIR/stack-lts-14.27.yaml"
+    env: STACK_YAML="stack-lts-14.27.yaml"
 
 script:
-  - |
-    if [ -z "$STACK_YAML" ]; then
-      cabal new-build all --enable-tests
-      cabal new-test all --enable-tests
-      # git fetch origin master:origin/master && git rebase origin/master --exec "cabal new-build all --enable-tests"
-    else
-      # install stack
-      curl -sSL https://get.haskellstack.org/ | sh
-
-      # build project with stack
-      stack --version
-      stack build --system-ghc --test
-      # git fetch origin master:origin/master && git rebase origin/master --exec "stack build --system-ghc --test"
-    fi
+  - travis-build.sh    
 
 install: skip
