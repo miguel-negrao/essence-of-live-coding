@@ -35,6 +35,6 @@ matrix:
     env: STACK_YAML="stack-lts-14.27.yaml"
 
 script:
-  - travis-build.sh    
+  - bash travis-build.sh    
 
 install: skip
