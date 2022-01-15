@@ -6,7 +6,7 @@ jobs:
     strategy:
       matrix:
         ghc: ['8.8.4','8.10.7']
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     name: Haskell GHC ${{ matrix.ghc }} cabal + stack
     steps:
       - uses: actions/checkout@v2
