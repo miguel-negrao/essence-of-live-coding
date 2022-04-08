@@ -46,6 +46,20 @@ packages:
       sha256: 10fc26fdd7213c555698cf6a377434f3623af1a2af208eb5c72070b5aec568ab
   original:
     hackage: vivid-supercollider-0.4.1.2@sha256:c7493f2a67b04589df8943e58a7445803e3365c6ad439603bf35695734b9bd65,1738
+- completed:
+    hackage: arrow-utils-0.1.1@sha256:135f527058ef3228a4b7efc91cd2b2a583582e7f1b88d61b084d260b81a8598e,1122
+    pantry-tree:
+      size: 280
+      sha256: 48ee0de2b2eadb7e9b10c0907a689255b91c9d622249ac4e65a0ebb7f05e866f
+  original:
+    hackage: arrow-utils-0.1.1@sha256:135f527058ef3228a4b7efc91cd2b2a583582e7f1b88d61b084d260b81a8598e,1122
+- completed:
+    hackage: vector-sized-1.5.0@sha256:6b827805784b52ee9845ab5c930f627e6e27b6dea2354f6fc46295e63ccdb2ed,1758
+    pantry-tree:
+      size: 1302
+      sha256: c4010995ed0fbe9094142af691198f5b28a98b1ae0f7938b0d8a6e3fcf9769f1
+  original:
+    hackage: vector-sized-1.5.0@sha256:6b827805784b52ee9845ab5c930f627e6e27b6dea2354f6fc46295e63ccdb2ed,1758
 snapshots:
 - completed:
     size: 631483

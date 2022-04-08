@@ -3,6 +3,7 @@ resolver: lts-18.21
 packages:
 - essence-of-live-coding
 - essence-of-live-coding-frp
+- essence-of-live-coding-frp-test
 - essence-of-live-coding-gloss
 - essence-of-live-coding-gloss-example
 - essence-of-live-coding-PortMidi
