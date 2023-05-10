@@ -670,12 +670,12 @@ time :: Monad m => Cell (ClockInfoT m) a Time
 time = constantly 1.0 >>> integral
 
 -- | Integration using the rectangle rule. Integrates starting from zero.
-integral :: (Monad m, VectorSpace a s, Data a) => Cell (ClockInfoT m) a a
+integral :: (Monad m, VectorSpace a s, Data a, Fractional s) => Cell (ClockInfoT m) a a
 integral = integralFrom zeroVector
 
 -- | Integrates starting from a given value using the trapezoidal rule. On first tick outputs
 -- the zero vector.
-integralFrom :: (Monad m, VectorSpace a s, Data a) => a -> Cell (ClockInfoT m) a a
+integralFrom :: (Monad m, VectorSpace a s, Data a, Fractional s) => a -> Cell (ClockInfoT m) a a
 integralFrom a0 = proc a -> do
   dt <- constM ask -< ()
   aPrev <- delay zeroVector -< a
@@ -683,7 +683,7 @@ integralFrom a0 = proc a -> do
 
 -- | A very crude version of a derivative. It simply divides the value difference
 -- by the time difference. Outputs 'zeroVector' on first tick.
-derivative :: (Monad m, VectorSpace a s, Data a) => Cell (ClockInfoT m) a a
+derivative :: (Monad m, VectorSpace a s, Data a, Fractional s) => Cell (ClockInfoT m) a a
 derivative =
   zeroVector
     --> ( proc a -> do
